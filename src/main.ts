@@ -1,13 +1,19 @@
 import { MarkdownView, Plugin, TFile } from 'obsidian';
 import { getTagFilesMap, randomElement } from './utilities';
 import { SmartRandomNoteSettingTab } from './settingTab';
-import { SearchView, SmartRandomNoteSettings } from './types';
+import { RandomFolder, SearchView, SmartRandomNoteSettings } from './types';
 import { SmartRandomNoteNotice } from './smartRandomNoteNotice';
 import { OpenRandomTaggedNoteModal } from './openRandomTaggedNoteModal';
 
 export default class SmartRandomNotePlugin extends Plugin {
-    settings: SmartRandomNoteSettings = { openInNewLeaf: true, enableRibbonIcon: true };
+    settings: SmartRandomNoteSettings = {
+        openInNewLeaf: true,
+        replaceCurrentNote: false,
+        enableRibbonIcon: true,
+        randomFolders: [],
+    };
     ribbonIconEl: HTMLElement | undefined = undefined;
+    folderCommands: string[] = [];
 
     async onload(): Promise<void> {
         console.log('loading smart-random-note');
@@ -39,10 +45,13 @@ export default class SmartRandomNotePlugin extends Plugin {
             name: 'Insert Link at Cursor to Random Note from Search',
             callback: this.handleInsertLinkFromSearch,
         });
+
+        await this.updateFolderCommands();
     }
 
     onunload = (): void => {
         console.log('unloading smart-random-note');
+        this.removeAllFolderCommands();
     };
 
     handleOpenRandomNote = async (): Promise<void> => {
@@ -101,6 +110,13 @@ export default class SmartRandomNotePlugin extends Plugin {
         await this.insertRandomLinkAtCursor(searchResults);
     };
 
+    handleOpenRandomNoteFromFolder = async (folder: RandomFolder): Promise<void> => {
+        const markdownFiles = this.app.vault.getMarkdownFiles();
+        const filteredFiles = markdownFiles.filter((file) => file.path.startsWith(folder.path));
+
+        await this.openRandomNote(filteredFiles);
+    };
+
     openRandomNote = async (files: TFile[]): Promise<void> => {
         const markdownFiles = files.filter((file) => file.extension === 'md');
 
@@ -110,7 +126,8 @@ export default class SmartRandomNotePlugin extends Plugin {
         }
 
         const fileToOpen = randomElement(markdownFiles);
-        await this.app.workspace.openLinkText(fileToOpen.basename, '', this.settings.openInNewLeaf, {
+        const openInNewLeaf = this.settings.replaceCurrentNote ? false : this.settings.openInNewLeaf;
+        await this.app.workspace.openLinkText(fileToOpen.basename, '', openInNewLeaf, {
             active: true,
         });
     };
@@ -139,22 +156,13 @@ export default class SmartRandomNotePlugin extends Plugin {
     loadSettings = async (): Promise<void> => {
         const loadedSettings = (await this.loadData()) as SmartRandomNoteSettings;
         if (loadedSettings) {
-            this.setOpenInNewLeaf(loadedSettings.openInNewLeaf);
-            this.setEnableRibbonIcon(loadedSettings.enableRibbonIcon);
-        } else {
-            this.refreshRibbonIcon();
+            Object.assign(this.settings, loadedSettings);
         }
-    };
-
-    setOpenInNewLeaf = (value: boolean): void => {
-        this.settings.openInNewLeaf = value;
-        this.saveData(this.settings);
-    };
-
-    setEnableRibbonIcon = (value: boolean): void => {
-        this.settings.enableRibbonIcon = value;
         this.refreshRibbonIcon();
-        this.saveData(this.settings);
+    };
+
+    saveSettings = async (): Promise<void> => {
+        await this.saveData(this.settings);
     };
 
     refreshRibbonIcon = (): void => {
@@ -166,5 +174,26 @@ export default class SmartRandomNotePlugin extends Plugin {
                 this.handleOpenRandomNoteFromSearch,
             );
         }
+    };
+
+    updateFolderCommands = async (): Promise<void> => {
+        this.removeAllFolderCommands();
+
+        this.settings.randomFolders.forEach((folder, index) => {
+            const commandId = `open-random-note-folder-${index + 1}`;
+            this.addCommand({
+                id: commandId,
+                name: `Open Random Note from '${folder.name}'`,
+                callback: () => this.handleOpenRandomNoteFromFolder(folder),
+            });
+            this.folderCommands.push(commandId);
+        });
+    };
+
+    removeAllFolderCommands = (): void => {
+        for (const commandId of this.folderCommands) {
+            this.app.commands.removeCommand(commandId);
+        }
+        this.folderCommands = [];
     };
 }

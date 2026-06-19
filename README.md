@@ -4,12 +4,13 @@
 
 This plugin enhances opening random notes.
 
-Three commands are available:
+The following commands are available:
 
 -   Open Random Note from Search: opens a random note from the list of search results.
 -   Insert Link at Cursor to Random Note from Search: inserts a link where the cursor is positioned to a raondom note from the list of search results.
 -   Open Tagged Random Note: opens a random note that has a selected tag.
 -   Open Random Note: behaves similarly to the core random note plugin.
+-   Open Random Note from '<name>': opens a random note from a folder you configure in settings. Add as many folders as you like; each one gets its own command.
 
 ![Screenshot](https://raw.githubusercontent.com/erichalldev/obsidian-smart-random-note/master/screenshot.gif)
 
@@ -39,6 +40,11 @@ From Obsidian 0.9.8, you can activate this plugin within Obsidian by doing the f
 Custom plugins are officially supported in Obsidian version 0.9.7. This plugin currently targets API version 0.9.15 but should be compatible with version 0.9.7 or higher.
 
 ## Version History
+
+### 1.0.0
+
+-   Add configurable "Random Note Folders": add folders in settings and get a dedicated "Open Random Note from '<name>'" command for each
+-   Add "Replace Current Note" setting to open random notes in place of the current note instead of a new leaf
 
 ### 0.2.1
 
